@@ -35,3 +35,62 @@ require "autocmds"
 vim.schedule(function()
   require "mappings"
 end)
+
+-- Compile & Run C (toggle terminal)
+vim.keymap.set("n", "<leader>s", function()
+  -- Check if the current buffer is a normal file (not a terminal)
+  if vim.bo.buftype == "" then
+    -- Save the current file if it's a normal buffer
+    vim.cmd("write")
+    print("File saved.")
+  end
+
+  -- Get the filename with extension (e.g., my_program.c)
+  local file = vim.fn.expand("%:t")
+  -- Get the directory of the current file
+  local current_dir = vim.fn.expand("%:p:h")
+
+  if _G.cc_term_buf and vim.api.nvim_buf_is_valid(_G.cc_term_buf) then
+    if _G.cc_term_win and vim.api.nvim_win_is_valid(_G.cc_term_win) then
+      vim.api.nvim_win_close(_G.cc_term_win, true)
+    end
+    vim.api.nvim_buf_delete(_G.cc_term_buf, { force = true })
+    _G.cc_term_buf, _G.cc_term_win = nil, nil
+    print("Closed compile terminal")
+    return
+  end
+
+  -- open a terminal buffer and compile/run
+  vim.cmd("split term://bash")
+  _G.cc_term_win = vim.api.nvim_get_current_win()
+  _G.cc_term_buf = vim.api.nvim_get_current_buf()
+
+  -- The command to change directory, compile, clear the screen, run,
+  -- and then wait for a key press
+  local command = string.format(
+    "cd %q && cc -Wall -Wextra -Werror %q > /dev/null && clear && ./a.out | cat -e && read -n 1 -p $'\nPress any key to close the terminal...'\n",
+    current_dir,
+    file
+  )
+
+  vim.fn.chansend(vim.b.terminal_job_id, command)
+end, { desc = "Save, Compile & Run C" })
+
+
+-- Escape insert mode quickly
+vim.keymap.set("i", "jj", "<Esc>", { desc = "Exit Insert Mode" })
+
+vim.keymap.set("n", "<leader>cf", function()
+  local pos = vim.api.nvim_win_get_cursor(0)
+  vim.cmd("%!clang-format") 
+  vim.api.nvim_win_set_cursor(0, pos)
+end, { noremap = true, silent = true, desc = "Format C file" })
+
+
+-- Enable transparency in NvChad
+vim.cmd [[
+  hi Normal guibg=NONE ctermbg=NONE
+  hi NormalNC guibg=NONE ctermbg=NONE
+  hi NvimTreeNormal guibg=NONE
+]]
+vim.opt.clipboard = "unnamedplus"
