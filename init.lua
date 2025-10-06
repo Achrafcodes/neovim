@@ -10,6 +10,7 @@ if not vim.uv.fs_stat(lazypath) then
 end
 
 vim.opt.rtp:prepend(lazypath)
+vim.lsp.handlers["textDocument/signatureHelp"] = function() end
 
 local lazy_config = require "configs.lazy"
 
@@ -94,3 +95,5 @@ vim.cmd [[
   hi NvimTreeNormal guibg=NONE
 ]]
 vim.opt.clipboard = "unnamedplus"
+vim.lsp.inlay_hint.enable(false)
+

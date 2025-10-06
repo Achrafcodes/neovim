@@ -1,11 +1,10 @@
+-- Replace your lua/plugins/init.lua with this:
 return {
   {
     "stevearc/conform.nvim",
-    -- event = 'BufWritePre', -- uncomment for format on save
     opts = require "configs.conform",
   },
 
-  -- These are some examples, uncomment them if you want to see them work!
   {
     "neovim/nvim-lspconfig",
     config = function()
@@ -13,16 +12,46 @@ return {
     end,
   },
 
-  -- test new blink
-  -- { import = "nvchad.blink.lazyspec" },
-
-  -- {
-  -- 	"nvim-treesitter/nvim-treesitter",
-  -- 	opts = {
-  -- 		ensure_installed = {
-  -- 			"vim", "lua", "vimdoc",
-  --      "html", "css"
-  -- 		},
-  -- 	},
-  -- },
+  -- Fixed Treesitter configuration
+  {
+    "nvim-treesitter/nvim-treesitter",
+    build = ":TSUpdate",
+    event = { "BufReadPost", "BufNewFile" },
+    cmd = { "TSUpdateSync", "TSUpdate", "TSInstall" },
+    opts = {
+      ensure_installed = {
+        "vim",
+        "lua",
+        "vimdoc",
+        "html",
+        "css",
+        "javascript",
+        "typescript",
+        "tsx",
+        "json",
+        "markdown",
+        "markdown_inline",
+        "bash",
+        "c",
+      },
+      
+      -- Enable highlighting
+      highlight = {
+        enable = true,
+        use_languagetree = true,
+        additional_vim_regex_highlighting = false,
+      },
+      
+      -- Enable indentation
+      indent = {
+        enable = true,
+      },
+      
+      -- Auto-install missing parsers
+      auto_install = true,
+    },
+    config = function(_, opts)
+      require("nvim-treesitter.configs").setup(opts)
+    end,
+  },
 }
