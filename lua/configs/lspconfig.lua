@@ -1,164 +1,113 @@
-require("nvchad.configs.lspconfig").defaults()
+vim.g.base46_cache = vim.fn.stdpath "data" .. "/base46/"
+vim.g.mapleader = " "
 
-local nvlsp = require "nvchad.configs.lspconfig"
+-- bootstrap lazy and all plugins
+local lazypath = vim.fn.stdpath "data" .. "/lazy/lazy.nvim"
 
--- MERN Stack LSP Servers
-local servers = {
-  "html",
-  "cssls",
-  "ts_ls", -- TypeScript/JavaScript
-  "tailwindcss",
-  "emmet_ls",
-  "jsonls",
-  "prismals", -- If using Prisma
-  "eslint", -- ESLint integration
-}
-
--- Default config for most servers
-for _, lsp in ipairs(servers) do
-  vim.lsp.enable(lsp)
+if not vim.uv.fs_stat(lazypath) then
+  local repo = "https://github.com/folke/lazy.nvim.git"
+  vim.fn.system { "git", "clone", "--filter=blob:none", repo, "--branch=stable", lazypath }
 end
 
--- Enhanced TypeScript/JavaScript setup with custom settings
-vim.lsp.config("ts_ls", {
-  cmd = { "typescript-language-server", "--stdio" },
-  filetypes = {
-    "javascript",
-    "javascriptreact",
-    "javascript.jsx",
-    "typescript",
-    "typescriptreact",
-    "typescript.tsx",
-  },
-  root_markers = { "package.json", "tsconfig.json", "jsconfig.json", ".git" },
-  settings = {
-    typescript = {
-      inlayHints = {
-        includeInlayParameterNameHints = "all",
-        includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-        includeInlayFunctionParameterTypeHints = true,
-        includeInlayVariableTypeHints = true,
-        includeInlayPropertyDeclarationTypeHints = true,
-        includeInlayFunctionLikeReturnTypeHints = true,
-        includeInlayEnumMemberValueHints = true,
-      },
-    },
-    javascript = {
-      inlayHints = {
-        includeInlayParameterNameHints = "all",
-        includeInlayParameterNameHintsWhenArgumentMatchesName = false,
-        includeInlayFunctionParameterTypeHints = true,
-        includeInlayVariableTypeHints = true,
-        includeInlayPropertyDeclarationTypeHints = true,
-        includeInlayFunctionLikeReturnTypeHints = true,
-        includeInlayEnumMemberValueHints = true,
-      },
-    },
-  },
-})
+vim.opt.rtp:prepend(lazypath)
 
--- Emmet for React
-vim.lsp.config("emmet_ls", {
-  cmd = { "emmet-ls", "--stdio" },
-  filetypes = {
-    "html",
-    "css",
-    "scss",
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact",
-  },
-  settings = {
-    html = {
-      options = {
-        ["bem.enabled"] = true,
-      },
-    },
-  },
-})
+-- DISABLE SIGNATURE HELP POPUP (the one showing when typing function arguments)
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
+  vim.lsp.handlers.signature_help, {
+    silent = true,
+    focusable = false,
+    border = "none",
+  }
+)
 
--- Tailwind CSS with custom settings
-vim.lsp.config("tailwindcss", {
-  cmd = { "tailwindcss-language-server", "--stdio" },
-  filetypes = {
-    "html",
-    "css",
-    "scss",
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "typescriptreact",
-  },
-  root_markers = {
-    "tailwind.config.js",
-    "tailwind.config.cjs",
-    "tailwind.config.mjs",
-    "tailwind.config.ts",
-    "postcss.config.js",
-    "postcss.config.cjs",
-    "postcss.config.mjs",
-    "postcss.config.ts",
-  },
-  settings = {
-    tailwindCSS = {
-      experimental = {
-        classRegex = {
-          { "cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]" },
-          { "cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)" },
-        },
-      },
-    },
-  },
-})
-
--- ESLint with auto-fix on save
-vim.lsp.config("eslint", {
-  cmd = { "vscode-eslint-language-server", "--stdio" },
-  filetypes = {
-    "javascript",
-    "javascriptreact",
-    "javascript.jsx",
-    "typescript",
-    "typescriptreact",
-    "typescript.tsx",
-  },
-  root_markers = {
-    ".eslintrc",
-    ".eslintrc.js",
-    ".eslintrc.cjs",
-    ".eslintrc.yaml",
-    ".eslintrc.yml",
-    ".eslintrc.json",
-    "package.json",
-  },
-})
-
--- Auto-fix ESLint on save using code actions
-vim.api.nvim_create_autocmd("BufWritePre", {
-  pattern = { "*.tsx", "*.ts", "*.jsx", "*.js" },
+-- Alternative: Completely disable signature help
+vim.api.nvim_create_autocmd("LspAttach", {
   callback = function(args)
-    -- Only run if ESLint LSP is attached
-    local clients = vim.lsp.get_clients({ bufnr = args.buf })
-    local has_eslint = false
-    for _, client in ipairs(clients) do
-      if client.name == "eslint" then
-        has_eslint = true
-        break
-      end
-    end
-
-    if has_eslint then
-      -- Try the command first
-      if vim.fn.exists(":EslintFixAll") > 0 then
-        vim.cmd("EslintFixAll")
-      else
-        -- Fallback to code action
-        vim.lsp.buf.code_action({
-          context = { only = { "source.fixAll.eslint" }, diagnostics = {} },
-          apply = true,
-        })
-      end
-    end
+    vim.keymap.del("i", "<C-k>", { buffer = args.buf })
   end,
 })
+
+local lazy_config = require "configs.lazy"
+
+-- load plugins
+require("lazy").setup({
+  {
+    "NvChad/NvChad",
+    lazy = false,
+    branch = "v2.5",
+    import = "nvchad.plugins",
+  },
+
+  { import = "plugins" },
+}, lazy_config)
+
+-- load theme
+dofile(vim.g.base46_cache .. "defaults")
+dofile(vim.g.base46_cache .. "statusline")
+
+require "options"
+require "autocmds"
+
+vim.schedule(function()
+  require "mappings"
+end)
+
+-- Compile & Run C (toggle terminal)
+vim.keymap.set("n", "<leader>s", function()
+  -- Check if the current buffer is a normal file (not a terminal)
+  if vim.bo.buftype == "" then
+    -- Save the current file if it's a normal buffer
+    vim.cmd("write")
+    print("File saved.")
+  end
+
+  -- Get the filename with extension (e.g., my_program.c)
+  local file = vim.fn.expand("%:t")
+  -- Get the directory of the current file
+  local current_dir = vim.fn.expand("%:p:h")
+
+  if _G.cc_term_buf and vim.api.nvim_buf_is_valid(_G.cc_term_buf) then
+    if _G.cc_term_win and vim.api.nvim_win_is_valid(_G.cc_term_win) then
+      vim.api.nvim_win_close(_G.cc_term_win, true)
+    end
+    vim.api.nvim_buf_delete(_G.cc_term_buf, { force = true })
+    _G.cc_term_buf, _G.cc_term_win = nil, nil
+    print("Closed compile terminal")
+    return
+  end
+
+  -- open a terminal buffer and compile/run
+  vim.cmd("split term://bash")
+  _G.cc_term_win = vim.api.nvim_get_current_win()
+  _G.cc_term_buf = vim.api.nvim_get_current_buf()
+
+  -- The command to change directory, compile, clear the screen, run,
+  -- and then wait for a key press
+  local command = string.format(
+    "cd %q && cc -Wall -Wextra -Werror %q > /dev/null && clear && ./a.out | cat -e && read -n 1 -p $'\nPress any key to close the terminal...'\n",
+    current_dir,
+    file
+  )
+
+  vim.fn.chansend(vim.b.terminal_job_id, command)
+end, { desc = "Save, Compile & Run C" })
+
+
+-- Escape insert mode quickly
+vim.keymap.set("i", "jj", "<Esc>", { desc = "Exit Insert Mode" })
+
+vim.keymap.set("n", "<leader>cf", function()
+  local pos = vim.api.nvim_win_get_cursor(0)
+  vim.cmd("%!clang-format") 
+  vim.api.nvim_win_set_cursor(0, pos)
+end, { noremap = true, silent = true, desc = "Format C file" })
+
+
+-- Enable transparency in NvChad
+vim.cmd [[
+  hi Normal guibg=NONE ctermbg=NONE
+  hi NormalNC guibg=NONE ctermbg=NONE
+  hi NvimTreeNormal guibg=NONE
+]]
+vim.opt.clipboard = "unnamedplus"
+vim.lsp.inlay_hint.enable(false)

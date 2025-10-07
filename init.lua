@@ -10,6 +10,8 @@ if not vim.uv.fs_stat(lazypath) then
 end
 
 vim.opt.rtp:prepend(lazypath)
+
+-- DISABLE SIGNATURE HELP POPUP
 vim.lsp.handlers["textDocument/signatureHelp"] = function() end
 
 local lazy_config = require "configs.lazy"
@@ -26,7 +28,7 @@ require("lazy").setup({
   { import = "plugins" },
 }, lazy_config)
 
--- load theme
+-- load theme FIRST (before anything else)
 dofile(vim.g.base46_cache .. "defaults")
 dofile(vim.g.base46_cache .. "statusline")
 
@@ -36,6 +38,27 @@ require "autocmds"
 vim.schedule(function()
   require "mappings"
 end)
+
+-- FORCE ONEDARK THEME AFTER EVERYTHING LOADS
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    -- Wait a bit for all plugins to load
+    vim.defer_fn(function()
+      -- Force reload the theme
+      dofile(vim.g.base46_cache .. "defaults")
+      dofile(vim.g.base46_cache .. "statusline")
+      
+      -- Override terminal background
+      vim.cmd([[
+        highlight Normal guibg=#282c34 guifg=#abb2bf
+        highlight NormalNC guibg=#282c34 guifg=#abb2bf
+        highlight NvimTreeNormal guibg=#282c34
+        highlight SignColumn guibg=#282c34
+        highlight LineNr guibg=#282c34
+      ]])
+    end, 100)
+  end,
+})
 
 -- Compile & Run C (toggle terminal)
 vim.keymap.set("n", "<leader>s", function()
@@ -88,12 +111,12 @@ vim.keymap.set("n", "<leader>cf", function()
 end, { noremap = true, silent = true, desc = "Format C file" })
 
 
--- Enable transparency in NvChad
-vim.cmd [[
-  hi Normal guibg=NONE ctermbg=NONE
-  hi NormalNC guibg=NONE ctermbg=NONE
-  hi NvimTreeNormal guibg=NONE
-]]
+-- REMOVE TRANSPARENCY - Force OneDark colors
+vim.cmd([[
+  highlight Normal guibg=#282c34 guifg=#abb2bf
+  highlight NormalNC guibg=#282c34 guifg=#abb2bf
+  highlight NvimTreeNormal guibg=#282c34
+]])
+
 vim.opt.clipboard = "unnamedplus"
 vim.lsp.inlay_hint.enable(false)
-
