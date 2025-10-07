@@ -302,3 +302,162 @@ map("n", "<leader>rs", function()
   vim.fn.system("pkill -f 'python3 -m http.server 8000'")
   print("Live server stopped")
 end, { desc = "Stop live server" })
+-- Run current JavaScript file with Node.js
+map("n", "<leader>rn", function()
+  local file = vim.fn.expand("%:p")  -- Get full path of current file
+  local ext = vim.fn.expand("%:e")   -- Get file extension
+  
+  if ext == "js" or ext == "jsx" or ext == "ts" or ext == "tsx" or ext == "mjs" then
+    require("nvchad.term").toggle {
+      pos = "sp",
+      cmd = "node " .. vim.fn.shellescape(file),
+      id = "noderun",
+      size = 0.3,
+    }
+    print("Running: node " .. vim.fn.expand("%:t"))
+  else
+    print("Not a JavaScript/TypeScript file: " .. ext)
+  end
+end, { desc = "Run current JS/TS file with Node" })
+
+-- Open current file in Chrome (works for HTML and JS files)
+map("n", "<leader>rc", function()
+  local file = vim.fn.expand("%:p")  -- Full path of current file
+  local filename = vim.fn.expand("%:t")  -- Just filename
+  local ext = vim.fn.expand("%:e")   -- File extension
+  local dir = vim.fn.expand("%:p:h") -- Directory of current file
+  
+  if ext == "html" then
+    -- For HTML files, open directly
+    vim.fn.system("google-chrome " .. vim.fn.shellescape(file) .. " &")
+    print("Opened in Chrome: " .. filename)
+  elseif ext == "js" or ext == "jsx" then
+    -- For JS files, create a temporary HTML wrapper
+    local html_file = dir .. "/_temp_run_" .. vim.fn.strftime("%H%M%S") .. ".html"
+    
+    local html_content = [[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JS Runner - ]] .. filename .. [[</title>
+  <style>
+    body { 
+      font-family: 'Courier New', monospace; 
+      padding: 20px; 
+      background: #1e1e1e; 
+      color: #d4d4d4; 
+      margin: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { 
+      color: #4ec9b0; 
+      border-bottom: 2px solid #4ec9b0;
+      padding-bottom: 10px;
+    }
+    .info {
+      background: #2d2d2d;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 JavaScript Runner</h1>
+    <div class="info">
+      <strong>Running:</strong> ]] .. filename .. [[<br>
+      <strong>Check Console:</strong> Press F12 to open Developer Tools
+    </div>
+  </div>
+  <script src="]] .. filename .. [["></script>
+</body>
+</html>
+]]
+    
+    local f = io.open(html_file, "w")
+    if f then
+      f:write(html_content)
+      f:close()
+      vim.fn.system("google-chrome " .. vim.fn.shellescape(html_file) .. " &")
+      print("Opened JS in Chrome. Press F12 to see console output.")
+      print("Temporary file: " .. html_file)
+    else
+      print("Error: Could not create temporary HTML file")
+    end
+  else
+    print("This command works only for .js, .jsx or .html files. Current: ." .. ext)
+  end
+end, { desc = "Run current file in Chrome" })
+-- Live Server with Browser-Sync (better auto-refresh)
+map("n", "<leader>rl", function()
+  local file = vim.fn.expand("%:t")
+  local ext = vim.fn.expand("%:e")
+  local dir = vim.fn.expand("%:p:h")
+  
+  if ext == "html" then
+    require("nvchad.term").runner {
+      pos = "sp",
+      cmd = "cd " .. dir .. " && npx browser-sync start --server --files '*.html, *.css, *.js' --port 8000",
+      id = "liveserver",
+      clear_cmd = true,
+    }
+    vim.defer_fn(function()
+      vim.fn.system("google-chrome http://localhost:8000/" .. file .. " &")
+    end, 3000)
+    print("BrowserSync: http://localhost:8000/" .. file)
+    print("Auto-refresh enabled for HTML, CSS, JS files!")
+  elseif ext == "js" or ext == "jsx" then
+    local html_file = dir .. "/_temp_live_" .. vim.fn.strftime("%H%M%S") .. ".html"
+    
+    local html_content = [[
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JS Live - ]] .. file .. [[</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    h1 { color: #4ec9b0; }
+  </style>
+</head>
+<body>
+  <h1>🚀 Running: ]] .. file .. [[</h1>
+  <p>Auto-refresh enabled! Changes will update automatically.</p>
+  <script src="]] .. file .. [["></script>
+</body>
+</html>
+]]
+    
+    local f = io.open(html_file, "w")
+    if f then
+      f:write(html_content)
+      f:close()
+      
+      require("nvchad.term").runner {
+        pos = "sp",
+        cmd = "cd " .. dir .. " && npx browser-sync start --server --files '*.html, *.css, *.js' --port 8000",
+        id = "liveserver",
+        clear_cmd = true,
+      }
+      
+      vim.defer_fn(function()
+        vim.fn.system("google-chrome http://localhost:8000/" .. vim.fn.fnamemodify(html_file, ":t") .. " &")
+      end, 3000)
+      print("BrowserSync running with auto-refresh!")
+    end
+  else
+    print("Live server works only for .js, .jsx or .html files")
+  end
+end, { desc = "Start live server with BrowserSync" })
+-- Stop live server
+map("n", "<leader>rs", function()
+  vim.fn.system("pkill -f 'live-server'")
+  vim.fn.system("pkill -f 'browser-sync'")
+  print("Live servers stopped")
+end, { desc = "Stop all live servers" })
